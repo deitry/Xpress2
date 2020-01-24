@@ -7,26 +7,31 @@ using System.Threading.Tasks;
 
 namespace Xpress2
 {
-    interface IDataConsumer
+    public interface IDataConsumer
     {
-        void ProcessData(OutputData data);
+        void ProcessData(OutputData data); 
+        string OutputDir { get; set; }
     }
 
     // пишет выходные данные в файл
-    class FileConsumer : IDataConsumer
+    public class FileConsumer : IDataConsumer
     {
-        private readonly string OutputDir;
+        public string OutputDir { get; set; }
 
-        // создаём выходную папку, если её ещё не было
-        // NB: если указанную папку создать нельзя, сами виноваты
         public FileConsumer(string outputDir)
         {
             this.OutputDir = outputDir;
-            Directory.CreateDirectory(this.OutputDir);
         }
 
         public void ProcessData(OutputData data)
         {
+            // создаём выходную папку, если её ещё не было.
+            // Откладываем созданиие папки до этого момента, чтобы
+            // не создавать почём зря, если нет необходимости.
+            // NB: если указанную папку создать нельзя, сами виноваты
+            if (!Directory.Exists(this.OutputDir))
+                Directory.CreateDirectory(this.OutputDir);
+
             var outputPath = $@"{OutputDir}\{Path.GetFileName(data.FileName)}";
             using (var output = new StreamWriter(outputPath))
             {

@@ -12,15 +12,17 @@ namespace Xpress2.Test
         [TestMethod]
         public void TestFileProviderInvokingEvents()
         {
+            // проверяем, что провайдер файлов работает и создаёт события
             var dirPath = $@"{Directory.GetCurrentDirectory()}\unittest\in";
             if (!Directory.Exists(dirPath)) Directory.CreateDirectory(dirPath);
             // очищаем
             Directory.Delete(dirPath, true);
 
-            Xpress2.IDataProvider dataProvider = new FileDataProvider(dirPath);
+            Xpress2.IDataProvider dataProvider = new CreatedFileDataProvider(dirPath);
             
             var origFiles = new List<string>
             {
+                // набор случайных названий
                 "1.txt", "2.txt", "test1.txt", "dddsddfsdfsd.txt"
             };
             var filesProcessed = new List<string>();
@@ -45,30 +47,26 @@ namespace Xpress2.Test
         [TestMethod]
         public void TestFileProcessedCorrectly()
         {
-            // убедиться, что каждый воркер в отдельности ДЕЙСТВИТЕЛЬНО подсчитывает количество букв
+            // TODO: убедиться, что воркер ДЕЙСТВИТЕЛЬНО подсчитывает количество букв
+            // - Сначала надо вынести Worker отдельно, инкапсулируя ProcessFile
         }
 
         [TestMethod]
         public void TestFileConsumerHandlesData()
         {
-            // убеждаемся, что файл с выходным значением действительно пишется
+            // TODO: убеждаемся, что файл с выходным значением действительно пишется
         }
 
         [TestMethod]
         public void TestWorkerManagerStopping()
         {
-            // убеждаемся, что после остановки менеджера потоков нет
+            // TODO: убеждаемся, что после остановки менеджера потоков нет
         }
 
         [TestMethod]
         public void TestWorkerManagerStateSwitch()
         {
-            var manager = new WorkerManager();
-            // убеждаемся, что при смене состояний у нас не создаётся лишних потоков
-            for (var i = 0; i < 10; ++i)
-            {
-
-            }
+            // TODO: убеждаемся, что при смене состояний у нас не создаётся лишних потоков
         }
     }
 }

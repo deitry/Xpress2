@@ -1,30 +1,57 @@
 ﻿using System.Collections.Concurrent;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-// альтернативный способ сделать классы видимыми для Xpress2.Test
-//[assembly: InternalsVisibleTo("RootBase.Tests")]
+// сделать классы видимыми для Xpress2.Test
+[assembly: InternalsVisibleTo("RootBase.Tests")]
 namespace Xpress2
 {
     // процедура, которую будут выполнять все потоки
     public delegate void Runner();
 
     // абстрагирует работу с потоками
+    // TODO: выделить интерфейс
+    // Вынести работу со строкой, чтобы можно было задавать обработчик извне?
+    // Или другим способом обеспечить возможность различного поведения.
+    // Дело благородное, но выходит за рамки тестового задания
     public class WorkerManager
     {
         // максимальное количество потоков согласно условию
-        private const int MaxThreadCnt = 4;
-        readonly Regex Pattern = new Regex("[a-z]",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        public const int MaxThreadCnt = 4;
 
+        // ThreadPool?
         private Thread[] Workers { get; set; }
-        public bool Running { get; private set; }
+
+        private bool _running;
+        public bool Running
+        {
+            get => _running;
+            set
+            {
+                if (this._running == value) return;
+
+                if (value)
+                {
+                    Initialize();
+  
+                    // выставляем true только когда потоки уже запущены
+                    this._running = true;
+                }
+                else
+                {
+                    this._running = false;
+
+                    // если false - дождаться окончания работы всех текущих потоков
+                    foreach (var thread in this.Workers)
+                        thread.Join();
+                }
+            }
+        }
 
         private readonly ConcurrentQueue<string> _fileQueue;
-
-        //private Queue<InputData> queue;
 
         // были обработаны новые данные
         public event ProcessDataHandler DataProcessed;
@@ -32,7 +59,69 @@ namespace Xpress2
         public WorkerManager()
         {
             _fileQueue = new ConcurrentQueue<string>();
-            this.SetRunning(true);
+            this.Start();
+        }
+
+        public void Start() => this.Running = true;
+        public void Stop() => this.Running = false;
+
+        // создаём новые потоки
+        protected void Initialize()
+        {
+            this.Workers = new Thread[MaxThreadCnt];
+            for (var i = 0; i < MaxThreadCnt; ++i)
+            {
+                this.Workers[i] = WorkerManager.CreateWorker(
+                    () =>
+                    {
+                        // сходу не придумал, как лучше разделить WorkerManager и Worker.
+                        // Оставляю так. По-хорошему, Worker должен инкапсулировать и Thread, и способ обработки,
+                        // но при этом быть независимым от Queue
+
+                        var pattern = new Regex("[a-z]",
+                            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+                        while (this.Running)
+                        {
+                            if (_fileQueue.Count <= 0) Thread.Sleep(1000);
+                            if (!_fileQueue.TryDequeue(out var fileName)) continue;
+                            
+                            try
+                            {
+                                var sum = 0;
+                                // https://social.msdn.microsoft.com/Forums/vstudio/en-US/d87c1085-cacb-4d82-826f-4151bf967f86/parallelfor-with-sum?forum=parallelextensions
+                                // технически это тоже способ как обеспечить условие про четыре потока
+                                Parallel.ForEach(
+                                    source: File.ReadLines(fileName),
+                                    parallelOptions: new ParallelOptions { MaxDegreeOfParallelism = WorkerManager.MaxThreadCnt },
+                                    body: (line, _, lineNumber) =>
+                                    {
+                                        // подсчитываем число букв в документе.
+                                        // Более простой вариант для подсчёта просто букв:
+                                        // line.Count(char.IsLetter);
+                                        var total = pattern.Matches(line).Count;
+                                        Interlocked.Add(ref sum, total);
+                                    });
+                                DataProcessed?.Invoke(new OutputData { FileName = fileName, Value = sum });
+                            }
+                            catch (IOException)
+                            {
+                                // если удалили файл пока он обрабатывается, ничего не делаем
+                            }
+                        }
+                    }
+                );
+            }
+
+            // запускаем в отдельном цикле - для наглядности
+            foreach (var thread in this.Workers)
+                thread.Start();
+        }
+
+        // TODO: убедиться, что потоки успешно завершаются в любом случае
+        ~WorkerManager()
+        {
+            this.Stop();
         }
 
         // создаёт новый поток
@@ -45,74 +134,6 @@ namespace Xpress2
         public void AddDataToQueue(InputData data)
         {
             this._fileQueue.Enqueue(data.FileName);
-        }
-
-        // TODO: разделить WorkerManager и Processor?
-        private void ProcessFile(string fileName)
-        {
-            // технически это тоже способ как обеспечить условие про четыре потока
-            var options = new ParallelOptions
-            {
-                MaxDegreeOfParallelism = MaxThreadCnt
-            };
-
-            // https://social.msdn.microsoft.com/Forums/vstudio/en-US/d87c1085-cacb-4d82-826f-4151bf967f86/parallelfor-with-sum?forum=parallelextensions
-            // берём самый простой вариант с использованием lock
-            var sum = 0;
-            var sync = new object();
-
-            Parallel.ForEach(
-                source: File.ReadLines(fileName), 
-                parallelOptions: options, 
-                body: (line, _, lineNumber) =>
-            {
-                // подсчитываем число букв в документе.
-                // Более простой вариант для подсчёта просто букв:
-                // line.Count(char.IsLetter);
-                var total = this.Pattern.Matches(line).Count;
-                lock (sync) {
-                    sum += total;
-                }
-            });
-
-            this.DataProcessed?.Invoke(new OutputData{FileName = fileName, Value = sum});
-        }
-
-        public void SetRunning(bool running)
-        {
-            if (this.Running == running) return;
-
-            if (running)
-            {
-                // создаём новые потоки
-                this.Workers = new Thread[MaxThreadCnt];
-                for (var i = 0; i < MaxThreadCnt; ++i)
-                {
-                    this.Workers[i] = WorkerManager.CreateWorker(
-                        () =>
-                        {
-                            while (this.Running)
-                            {
-                                if (_fileQueue.Count <= 0) Thread.Sleep(1000);
-                                if (_fileQueue.TryDequeue(out var fileName))
-                                    this.ProcessFile(fileName);
-                            }
-                        }
-                    );
-                }
-
-                // запускаем в отдельном цикле - для наглядности
-                foreach (var thread in this.Workers)
-                    thread.Start();
-            }
-
-            // выставляем true только когда потоки уже запущены
-            this.Running = running;
-            if (running) return;
-
-            // если false - дождаться окончания работы всех текущих потоков
-            foreach (var thread in this.Workers)
-                thread.Join();
         }
     }
 }
