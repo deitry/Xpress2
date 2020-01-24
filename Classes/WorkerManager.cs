@@ -74,9 +74,9 @@ namespace Xpress2
                 this.Workers[i] = WorkerManager.CreateWorker(
                     () =>
                     {
-                        // сходу не придумал, как лучше разделить WorkerManager и Worker.
+                        // FIXME: сходу не придумал, как лучше разделить WorkerManager и Worker.
                         // Оставляю так. По-хорошему, Worker должен инкапсулировать и Thread, и способ обработки,
-                        // но при этом быть независимым от Queue
+                        // но при этом быть независимым от Queue и WorkerManager'а в целом
 
                         var pattern = new Regex("[a-z]",
                             RegexOptions.Compiled | RegexOptions.IgnoreCase);

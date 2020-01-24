@@ -10,12 +10,14 @@ namespace Xpress2
     public struct InputData
     {
         // поскольку оперируем отдельными файлами, передаём имя в качестве входных данных
+        // для всеобщего удобства подразумеваем полное имя
         public string FileName;
     }
 
     // выходные данные
     public struct OutputData
     {
+        // для всеобщего удобства подразумеваем полное имя
         public string FileName;
         public int Value;
     }

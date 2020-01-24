@@ -9,8 +9,6 @@ namespace Xpress2
         private void SetState(bool started)
         {
             this._manager.Running = started;
-
-            // FIXME: проконтролировать, что UI поток согласуется с логикой
             this.StartButton.Enabled = !started;
             this.StopButton.Enabled = started;
         }
@@ -33,7 +31,8 @@ namespace Xpress2
                     () =>
                     {
                         // выводим на ListView
-                        // TODO: выводить имя конечного файла было бы практичнее
+                        // TODO: выводить имя конечного файла было бы практичнее,
+                        // но нужно избежать дублирования с Consumer
                         processedFilesListView.Items.Add(data.FileName);
                     }));
 
@@ -58,6 +57,7 @@ namespace Xpress2
 
         private void browseInputDirButton_Click(object sender, EventArgs e)
         {
+            // TODO: по-хорошему, нельзя назначать входную и выходную папки одинаковыми
             folderBrowserDialog.SelectedPath = inputFolderTextBox.Text;
             var result = folderBrowserDialog.ShowDialog();
             if (result == DialogResult.OK)
@@ -69,6 +69,7 @@ namespace Xpress2
 
         private void browseOutputDirButton_Click(object sender, EventArgs e)
         {
+            // TODO: по-хорошему, нельзя назначать входную и выходную папки одинаковыми
             folderBrowserDialog.SelectedPath = outputFolderTextBox.Text;
             var result = folderBrowserDialog.ShowDialog();
             if (result == DialogResult.OK)
@@ -80,6 +81,7 @@ namespace Xpress2
 
         private void FileProcessingForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            // останавливаем потоки при закрытии формы
             _manager.Stop();
         }
     }

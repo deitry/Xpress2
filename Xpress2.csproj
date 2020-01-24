@@ -46,19 +46,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DataConsumer.cs" />
-    <Compile Include="DataModel.cs" />
-    <Compile Include="WorkerManager.cs" />
-    <Compile Include="DataProvider.cs" />
-    <Compile Include="FileProcessingForm.cs">
+    <Compile Include="Classes\DataConsumer.cs" />
+    <Compile Include="Classes\DataModel.cs" />
+    <Compile Include="Classes\WorkerManager.cs" />
+    <Compile Include="Classes\DataProvider.cs" />
+    <Compile Include="Forms\FileProcessingForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="FileProcessingForm.Designer.cs">
+    <Compile Include="Forms\FileProcessingForm.Designer.cs">
       <DependentUpon>FileProcessingForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="FileProcessingForm.resx">
+    <EmbeddedResource Include="Forms\FileProcessingForm.resx">
       <DependentUpon>FileProcessingForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
